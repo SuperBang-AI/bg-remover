@@ -148,7 +148,10 @@
 
   function paintCredits(value) {
     state.credits = Math.max(0, Number(value) || 0);
-    const node = document.querySelector('[data-credits]');
+    // :not(body) is load-bearing. <body> carries data-credits as state, so a
+    // bare [data-credits] lookup matches the body first and setting textContent
+    // on it replaces the whole document with a single number.
+    const node = document.querySelector('[data-credits]:not(body)');
     const unit = document.querySelector('[data-credits-unit]');
     if (node) node.textContent = String(state.credits);
     if (unit) unit.textContent = state.credits === 1 ? 'credit' : 'credits';
