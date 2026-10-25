@@ -17,11 +17,17 @@ export default {
 
     /* ------------------------------------------------------------- auth */
 
-    if (pathname === '/auth/google' && request.method === 'GET') {
+    // Two spellings of the same pair: the Google console has the /api form
+    // registered as the redirect URI, while the in-page buttons link to the
+    // short one. Both land on the same handler.
+    if ((pathname === '/api/auth/google' || pathname === '/auth/google') && request.method === 'GET') {
       return handleAuthStart(request, env);
     }
 
-    if (pathname === '/auth/google/callback' && request.method === 'GET') {
+    if (
+      (pathname === '/api/auth/google/callback' || pathname === '/auth/google/callback') &&
+      request.method === 'GET'
+    ) {
       return handleAuthCallback(request, env);
     }
 

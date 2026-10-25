@@ -4,6 +4,10 @@
 .env.*
 !.env.example
 
+# Google OAuth desktop client JSON (contains client_secret)
+client_secret*.json
+*.apps.googleusercontent.com.json
+
 # dependencies / build artifacts
 node_modules/
 .wrangler/
