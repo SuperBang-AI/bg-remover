@@ -28,16 +28,17 @@
   --accent-wash: rgba(192, 58, 18, 0.09);
   --on-accent: #fff8f1;
 
-  /* checkerboard */
-  --check-ink: rgba(25, 23, 16, 0.07);
+  /* checkerboard: a whisper on the drop surface, readable on the result pane */
+  --check-ink: rgba(25, 23, 16, 0.042);
   --check-ink-strong: rgba(25, 23, 16, 0.1);
+  --check-swatch: rgba(25, 23, 16, 0.16);
 
   /* type */
   --font-display: 'Instrument Serif', 'Iowan Old Style', 'Times New Roman', serif;
   --font-sans: 'IBM Plex Sans', -apple-system, 'Segoe UI', sans-serif;
   --font-mono: 'IBM Plex Mono', ui-monospace, 'SFMono-Regular', monospace;
 
-  --fs-display: clamp(2.85rem, 7.4vw, 5.6rem);
+  --fs-display: clamp(2.7rem, 6.4vw, 4.95rem);
   --fs-h2: clamp(1.7rem, 3.4vw, 2.55rem);
   --fs-h3: 1.06rem;
   --fs-lede: clamp(1.02rem, 1.5vw, 1.16rem);
@@ -177,6 +178,11 @@ button {
   padding-inline: clamp(1.15rem, 4vw, 3rem);
 }
 
+/* Any element with the hidden attribute is gone, whatever display it declares. */
+[hidden] {
+  display: none !important;
+}
+
 .sr-only {
   position: absolute;
   width: 1px;
@@ -242,8 +248,8 @@ button {
 .section-head {
   display: grid;
   gap: var(--s4);
-  max-width: 34ch;
-  padding-bottom: var(--s6);
+  max-width: 40ch;
+  padding-bottom: var(--s5);
   border-bottom: 1px solid var(--line);
   margin-bottom: var(--s6);
 }
@@ -354,7 +360,7 @@ button {
    Hero — asymmetric: 7 columns of voice, 4 columns of spec, offset baseline
    ========================================================================== */
 .hero {
-  padding-block: clamp(2.6rem, 6vw, 5.4rem) clamp(1.8rem, 4vw, 3rem);
+  padding-block: clamp(1.9rem, 4.4vw, 3.5rem) clamp(1.5rem, 3vw, 2.5rem);
 }
 
 .hero__grid {
@@ -370,7 +376,7 @@ button {
   font-weight: 400;
   line-height: 0.94;
   letter-spacing: -0.028em;
-  margin-block: var(--s4) var(--s5);
+  margin-block: var(--s3) var(--s4);
   text-wrap: balance;
 }
 
@@ -384,7 +390,7 @@ button {
 }
 
 .hero__sub {
-  max-width: 46ch;
+  max-width: 44ch;
   font-size: var(--fs-lede);
   line-height: 1.58;
   color: var(--ink-2);
@@ -394,7 +400,7 @@ button {
   display: flex;
   flex-wrap: wrap;
   gap: var(--s3);
-  margin-top: var(--s6);
+  margin-top: var(--s5);
 }
 
 /* The spec block is deliberately pushed down and right of the headline, and
@@ -412,7 +418,7 @@ button {
   margin-bottom: var(--s5);
   border: 1px solid var(--line-2);
   border-radius: var(--r-xs);
-  background: repeating-conic-gradient(var(--check-ink-strong) 0% 25%, transparent 0% 50%) 0 0 / 12px 12px;
+  background: repeating-conic-gradient(var(--check-swatch) 0% 25%, transparent 0% 50%) 0 0 / 11px 11px;
   transform: rotate(-4deg);
   box-shadow: var(--shadow-lift);
 }
@@ -662,8 +668,8 @@ button {
   background-image:
     linear-gradient(45deg, var(--check-ink) 25%, transparent 25%, transparent 75%, var(--check-ink) 75%),
     linear-gradient(45deg, var(--check-ink) 25%, transparent 25%, transparent 75%, var(--check-ink) 75%);
-  background-size: 26px 26px, 26px 26px;
-  background-position: 0 0, 13px 13px;
+  background-size: 32px 32px, 32px 32px;
+  background-position: 0 0, 16px 16px;
   transition:
     background-color var(--dur-base) var(--ease),
     box-shadow var(--dur-base) var(--ease);
@@ -805,6 +811,9 @@ body.is-dragging .drop {
   align-items: center;
   justify-content: space-between;
   gap: var(--s3);
+  /* fixed height keeps the two images on the same baseline even though the
+     result label carries an extra tag */
+  min-height: 44px;
   padding: 10px var(--s5);
   border-bottom: 1px solid var(--line);
   background: var(--panel-sunk);
@@ -1304,9 +1313,22 @@ body.is-dragging .drop {
     grid-template-columns: minmax(0, 1fr);
   }
 
+  /* stacked panes: the divider becomes a labelled grey band instead of a clip
+     edge, so the "vs" stamp never lands on top of the next pane's header */
   .pane-divider {
-    height: 1px;
+    height: 22px;
     width: 100%;
+    background: none;
+  }
+
+  .pane-divider::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 50%;
+    height: 1px;
+    background: var(--line);
   }
 
   .pane__body {
@@ -1411,5 +1433,295 @@ body.is-dragging .drop {
     --line: rgba(25, 23, 16, 0.35);
     --line-2: rgba(25, 23, 16, 0.55);
     --muted: #4b4739;
+  }
+}
+
+/* ==========================================================================
+   Stage 2 — account strip in the header
+   Signed out: one bordered pill. Signed in: balance, then who, then the way
+   out. Nothing here is a card; it all sits on the same hairline as the nav.
+   ========================================================================== */
+.site-head__right {
+  display: flex;
+  align-items: center;
+  gap: var(--s5);
+  min-width: 0;
+}
+
+.auth-signin {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s2);
+  min-height: 38px;
+  padding: 0 0.9rem;
+  border: 1px solid var(--line-2);
+  border-radius: 999px;
+  background: var(--panel);
+  color: var(--ink);
+  font-size: var(--fs-sm);
+  font-weight: 500;
+  text-decoration: none;
+  white-space: nowrap;
+  transition:
+    border-color var(--dur-fast) var(--ease),
+    color var(--dur-fast) var(--ease),
+    box-shadow var(--dur-fast) var(--ease);
+}
+
+.auth-signin:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+  box-shadow: var(--shadow-lift);
+}
+
+/* A four colour ring, 13px wide: enough to read as Google, quiet enough to
+   live next to an all-ink header. */
+.auth-signin__mark {
+  width: 13px;
+  height: 13px;
+  flex: none;
+  border-radius: 50%;
+  background: conic-gradient(from -45deg, #ea4335 0 25%, #fbbc05 0 50%, #34a853 0 75%, #4285f4 0);
+  box-shadow: inset 0 0 0 3px var(--panel);
+}
+
+.auth-live {
+  display: flex;
+  align-items: center;
+  gap: var(--s3);
+  min-width: 0;
+}
+
+.auth-live__credits {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 5px;
+  padding: 3px 9px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--panel-sunk);
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.auth-live__num {
+  font-size: 0.86rem;
+  font-weight: 500;
+  letter-spacing: 0;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.auth-live__credits.is-empty {
+  border-color: rgba(192, 58, 18, 0.45);
+  background: var(--accent-wash);
+}
+
+.auth-live__credits.is-empty .auth-live__num {
+  color: var(--accent);
+}
+
+.auth-live__who {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s2);
+  min-width: 0;
+}
+
+.auth-live__avatar {
+  width: 30px;
+  height: 30px;
+  flex: none;
+  border-radius: 50%;
+  border: 1px solid var(--line-2);
+  background: var(--panel);
+  object-fit: cover;
+}
+
+.auth-live__initials {
+  display: grid;
+  place-items: center;
+  font-family: var(--font-mono);
+  font-size: 0.66rem;
+  letter-spacing: 0.04em;
+  color: var(--ink-2);
+}
+
+.auth-live__name {
+  max-width: 11ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--fs-sm);
+  color: var(--ink-2);
+}
+
+.auth-live__out {
+  padding: 6px 0;
+  border: 0;
+  border-bottom: 1px solid transparent;
+  background: none;
+  cursor: pointer;
+  font-family: var(--font-mono);
+  font-size: 0.63rem;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  color: var(--muted);
+  white-space: nowrap;
+  transition:
+    color var(--dur-fast) var(--ease),
+    border-color var(--dur-fast) var(--ease);
+}
+
+.auth-live__out:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+/* ==========================================================================
+   Stage 2 — the gate dialog
+   ========================================================================== */
+body.is-gated {
+  overflow: hidden;
+}
+
+.gate {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: grid;
+  place-items: center;
+  padding: var(--s5);
+}
+
+.gate__scrim {
+  position: absolute;
+  inset: 0;
+  background: rgba(25, 23, 16, 0.44);
+  -webkit-backdrop-filter: blur(3px);
+  backdrop-filter: blur(3px);
+  animation: gate-fade 220ms var(--ease);
+}
+
+.gate__card {
+  position: relative;
+  width: min(470px, 100%);
+  padding: clamp(1.5rem, 3.4vw, 2.1rem);
+  background: var(--panel);
+  border: 1px solid var(--line-2);
+  border-radius: var(--r-md);
+  box-shadow: 0 40px 80px -44px rgba(25, 23, 16, 0.62), var(--shadow-panel);
+  animation: gate-rise 280ms var(--ease);
+}
+
+.gate__kicker {
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.gate__title {
+  margin-block: var(--s2) var(--s3);
+  font-family: var(--font-display);
+  font-size: clamp(1.4rem, 3vw, 1.8rem);
+  font-weight: 400;
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+  text-wrap: balance;
+}
+
+.gate__body {
+  font-size: var(--fs-sm);
+  line-height: 1.62;
+  color: var(--ink-2);
+}
+
+.gate__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s2);
+  margin-top: var(--s5);
+}
+
+.gate__fine {
+  margin-top: var(--s4);
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
+
+.gate__fine:empty {
+  display: none;
+}
+
+.gate__close {
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  cursor: pointer;
+  font-size: 1.25rem;
+  line-height: 1;
+  color: var(--muted);
+  transition: color var(--dur-fast) var(--ease), background-color var(--dur-fast) var(--ease);
+}
+
+.gate__close:hover {
+  color: var(--ink);
+  background: rgba(25, 23, 16, 0.06);
+}
+
+@keyframes gate-fade {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes gate-rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.99);
+  }
+}
+
+@media (max-width: 820px) {
+  .site-head__right {
+    gap: var(--s3);
+  }
+
+  .auth-live__name {
+    display: none;
+  }
+}
+
+@media (max-width: 560px) {
+  .auth-signin__text {
+    display: none;
+  }
+
+  .auth-signin {
+    width: 38px;
+    padding: 0;
+    justify-content: center;
+  }
+
+  .auth-live__credits {
+    padding: 3px 7px;
+  }
+
+  .gate__actions .btn {
+    flex: 1 1 100%;
   }
 }

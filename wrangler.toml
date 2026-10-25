@@ -11,6 +11,13 @@ binding = "ASSETS"
 [observability]
 enabled = true
 
+# Accounts and the credit ledger.
+# Schema lives in migrations/, applied by hand (see that file's header).
+[[d1_databases]]
+binding = "DB"
+database_name = "bg-remover"
+database_id = "b2cdcdb0-e99b-4ed0-9256-043aa7a74e63"
+
 # Public, non-secret configuration only.
 # Secrets (REMOVE_BG_API_KEY, ...) are set with `wrangler secret put <NAME>` and read from env.
 [vars]

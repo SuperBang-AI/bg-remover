@@ -11,11 +11,11 @@ const DESCRIPTION =
 export const FAQ = [
   {
     q: 'Is this image background remover free?',
-    a: 'Yes. This release is free to use as much as you need, and every download is a full resolution PNG with no watermark. Accounts, credit packs and API access are the next release.',
+    a: 'You get 3 free removals when you sign in with Google, and no card is needed for them. After that, credit packs are the next release: nothing on this page charges you today.',
   },
   {
     q: 'Do I need an account to use it?',
-    a: 'No. There is no sign up, no email and nothing to install. Drop an image, wait a few seconds and the transparent PNG is yours to download.',
+    a: 'You sign in once with Google, so your free removals belong to an account instead of to a browser you might clear. There is no password to choose and no separate email form: Google hands us an id, a name and an avatar, and nothing else.',
   },
   {
     q: 'What file formats and sizes can I upload?',
@@ -39,7 +39,7 @@ export const FAQ = [
   },
   {
     q: 'What happens if the removal fails?',
-    a: 'You get a plain message explaining why, and the image stays on your machine. Nothing is charged in this release, and you can retry with the same file or a different one.',
+    a: 'You get a plain message explaining why, and the credit goes straight back to your balance. Nothing is lost when the engine cannot produce a cutout.',
   },
   {
     q: 'Can I use the cutouts commercially?',
@@ -51,8 +51,9 @@ export const FAQ = [
   },
 ];
 
-export function renderHome({ origin, providerReady }) {
+export function renderHome({ origin, providerReady, viewer = null }) {
   const canonical = `${origin}/`;
+  const credits = viewer ? viewer.credits : 0;
 
   return `<!doctype html>
 <html lang="en">
@@ -81,7 +82,7 @@ export function renderHome({ origin, providerReady }) {
 <link rel="stylesheet" href="/styles.css">
 ${structuredData(origin)}
 </head>
-<body data-provider="${providerReady ? 'ready' : 'offline'}">
+<body data-provider="${providerReady ? 'ready' : 'offline'}" data-signed-in="${viewer ? '1' : '0'}" data-credits="${credits}">
 
 <a class="skip" href="#tool">Skip to the tool</a>
 
@@ -90,13 +91,15 @@ ${structuredData(origin)}
     <a class="brand" href="/" aria-label="Cutout, back to the top">
       <span class="brand__mark" aria-hidden="true"></span>
       <span class="brand__word">cutout</span>
-      <span class="brand__stage">stage 1</span>
+      <span class="brand__stage">stage 2</span>
     </a>
-    <nav class="site-nav" aria-label="Page sections">
-      <a href="#how">How it works</a>
-      <a href="#faq">FAQ</a>
-      <a class="site-nav__cta" href="#tool">Open the tool</a>
-    </nav>
+    <div class="site-head__right">
+      <nav class="site-nav" aria-label="Page sections">
+        <a href="#how">How it works</a>
+        <a href="#faq">FAQ</a>
+      </nav>
+      ${authMarkup(viewer)}
+    </div>
   </div>
 </header>
 
@@ -106,7 +109,7 @@ ${structuredData(origin)}
     <div class="wrap hero__grid">
       <div class="hero__lead">
         <p class="eyebrow reveal" style="--i:0">
-          <span class="eyebrow__dot" aria-hidden="true"></span>Free AI cutout&nbsp;· no sign up
+          <span class="eyebrow__dot" aria-hidden="true"></span>3 free cutouts&nbsp;· sign in once
         </p>
         <h1 class="hero__title reveal" style="--i:1" id="hero-title">
           Image background<br>
@@ -268,8 +271,8 @@ ${structuredData(origin)}
     <div class="wrap strip__inner rise">
       <p class="strip__k">Privacy</p>
       <p class="strip__v">
-        Images are never written to disk. There is no account to tie them to, and no copy left
-        behind for anything else to use.
+        Images are never written to disk. Your account holds removal credits, never photos, and no
+        copy is left behind for anything else to use.
       </p>
     </div>
   </section>
@@ -306,13 +309,85 @@ ${structuredData(origin)}
   <div class="wrap site-foot__inner">
     <p class="site-foot__brand"><span class="brand__mark" aria-hidden="true"></span>cutout</p>
     <p class="site-foot__note">Background removal by remove.bg. Served from the edge by Cloudflare Workers.</p>
-    <p class="site-foot__legal">&copy; 2026 &nbsp;·&nbsp; Stage 1 preview</p>
+    <p class="site-foot__legal">&copy; 2026 &nbsp;·&nbsp; Stage 2 preview</p>
   </div>
 </footer>
 
+${gateMarkup()}
+
+<script src="/auth.js" defer></script>
 <script src="/app.js" defer></script>
 </body>
 </html>`;
+}
+
+/**
+ * Header state is rendered on the server from the session, so there is no
+ * flash of "Sign in" for someone who is already signed in. The client script
+ * only ever updates the credit number after a removal or a sign-out.
+ */
+function authMarkup(viewer) {
+  if (!viewer) {
+    return `<a class="auth-signin" href="/auth/google" data-auth="out">
+        <span class="auth-signin__mark" aria-hidden="true"></span>
+        <span class="auth-signin__text">Sign in with Google</span>
+      </a>`;
+  }
+
+  const name = viewer.user.name || viewer.user.email.split('@')[0];
+  const avatar = viewer.user.avatarUrl
+    ? `<img class="auth-live__avatar" src="${escapeHtml(viewer.user.avatarUrl)}" alt="" width="30" height="30" loading="lazy" referrerpolicy="no-referrer">`
+    : `<span class="auth-live__avatar auth-live__initials" aria-hidden="true">${escapeHtml(initials(name))}</span>`;
+
+  return `<div class="auth-live" data-auth="in">
+        <span class="auth-live__credits${viewer.credits > 0 ? '' : ' is-empty'}" title="${viewer.credits} background removals left">
+          <span class="auth-live__num" data-credits>${viewer.credits}</span>
+          <span class="auth-live__unit" data-credits-unit>${viewer.credits === 1 ? 'credit' : 'credits'}</span>
+        </span>
+        <span class="auth-live__who">
+          ${avatar}
+          <span class="auth-live__name">${escapeHtml(name)}</span>
+        </span>
+        <button class="auth-live__out" type="button" data-auth-out>Sign out</button>
+      </div>`;
+}
+
+/**
+ * One dialog, two messages. The copy and the buttons are filled in by
+ * /auth.js so the markup stays small and the wording lives in one place.
+ */
+function gateMarkup() {
+  return `<div class="gate" id="gate" hidden>
+  <div class="gate__scrim" data-gate-close></div>
+  <div class="gate__card" role="dialog" aria-modal="true" aria-labelledby="gate-title" aria-describedby="gate-body">
+    <p class="gate__kicker" id="gate-kicker">Free credits</p>
+    <h2 class="gate__title" id="gate-title">Sign in to remove a background</h2>
+    <p class="gate__body" id="gate-body"></p>
+    <div class="gate__actions" id="gate-actions"></div>
+    <p class="gate__fine" id="gate-fine"></p>
+    <button class="gate__close" type="button" data-gate-close aria-label="Close">&times;</button>
+  </div>
+</div>`;
+}
+
+function initials(name) {
+  const words = String(name)
+    .replace(/[^\p{L}\p{N} ]/gu, ' ')
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean);
+  if (!words.length) return '?';
+  if (words.length === 1) return words[0].slice(0, 2).toUpperCase();
+  return (words[0][0] + words[words.length - 1][0]).toUpperCase();
+}
+
+function escapeHtml(value) {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 }
 
 function noticeMarkup() {

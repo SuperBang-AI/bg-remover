@@ -41,6 +41,11 @@
   let hintTimers = [];
   let dragDepth = 0;
 
+  /** The sign-in / credits module, when the page shipped one. */
+  function auth() {
+    return window.CutoutAuth || null;
+  }
+
   /* ---------------------------------------------------------------- helpers */
 
   function formatSize(bytes) {
@@ -119,6 +124,11 @@
   async function handleFile(file) {
     if (state.busy) return;
 
+    // Checked before the file is read: a signed-out visitor or an empty balance
+    // gets the dialog, not a request the server would only refuse.
+    const guard = auth();
+    if (guard && !guard.ensureCanRemove()) return;
+
     clearError();
     const problem = validate(file);
     if (problem) {
@@ -153,13 +163,17 @@
       });
 
       if (!response.ok) {
-        throw new Error(await readError(response));
+        throw await failure(response);
       }
 
       const blob = await response.blob();
       if (!blob.size) {
         throw new Error('The result came back empty. Please try again.');
       }
+
+      // The server is the only authority on the balance; mirror what it says.
+      const remaining = response.headers.get('x-credits-remaining');
+      if (remaining !== null && guard) guard.setCredits(Number(remaining));
 
       state.resultUrl = URL.createObjectURL(blob);
       el.imgResult.src = state.resultUrl;
@@ -168,20 +182,29 @@
       el.download.removeAttribute('aria-disabled');
 
       const durationMs = Number(response.headers.get('x-bg-duration-ms') || 0);
-      el.resultNote.textContent =
-        'PNG · ' + formatSize(blob.size) + (durationMs ? ' · ' + (durationMs / 1000).toFixed(1) + 's' : '');
+      const timing = durationMs ? ' · ' + (durationMs / 1000).toFixed(1) + 's' : '';
+      const balance =
+        remaining === null
+          ? ''
+          : ' · 1 credit used · ' + remaining + (Number(remaining) === 1 ? ' credit left' : ' credits left');
+      el.resultNote.textContent = 'PNG · ' + formatSize(blob.size) + timing + balance;
 
       setStage('compare');
       describeImage(el.imgOriginal, el.metaOriginal, file.size);
       describeImage(el.imgResult, el.metaResult, blob.size);
       setStatus(durationMs ? 'Done in ' + (durationMs / 1000).toFixed(1) + 's' : 'Done');
     } catch (error) {
-      if (error.name === 'AbortError') {
+      if (error && error.gated) {
+        // The dialog is already open and says the useful thing; the error bar
+        // would only repeat it.
+        setStage('empty');
+      } else if (error.name === 'AbortError') {
         showError('The removal took longer than 45 seconds and was stopped. Please try a smaller image.');
+        setStage('empty');
       } else {
         showError(error.message || 'Something went wrong. Please try again.');
+        setStage('empty');
       }
-      setStage('empty');
     } finally {
       clearTimeout(timeout);
       stopHints();
@@ -190,16 +213,52 @@
     }
   }
 
-  async function readError(response) {
+  /**
+   * Turn a failed response into either a dialog (identity / balance problems,
+   * where the page has a better answer than a red bar) or a sentence for the
+   * error bar. Codes come from the API, so the mapping stays honest.
+   */
+  async function failure(response) {
+    let payload = null;
     try {
-      const data = await response.json();
-      if (data && data.error && data.error.message) return data.error.message;
+      payload = await response.json();
     } catch {
-      /* fall through to the generic message */
+      /* not JSON: fall through to the status based copy */
     }
-    if (response.status === 413) return 'That image is too large. The limit is 10 MB.';
-    if (response.status === 415) return 'That file type is not supported. Use a JPG, PNG or WEBP image.';
-    return 'The removal failed with status ' + response.status + '. Please try again.';
+
+    const error = payload && payload.error ? payload.error : null;
+    const guard = auth();
+
+    if (response.status === 401 || (error && error.code === 'auth_required')) {
+      if (guard) guard.openGate('login');
+      return gated();
+    }
+
+    if (response.status === 402 || (error && error.code === 'out_of_credits')) {
+      if (guard) {
+        guard.setCredits(0);
+        guard.openGate('credits');
+      }
+      return gated();
+    }
+
+    if (error && error.code === 'provider_not_configured') {
+      return new Error(
+        'Background removal is not switched on for this build yet. The interface is ready; the removal key still has to be set.',
+      );
+    }
+
+    if (error && error.message) return new Error(error.message);
+
+    if (response.status === 413) return new Error('That image is too large. The limit is 10 MB.');
+    if (response.status === 415) return new Error('That file type is not supported. Use a JPG, PNG or WEBP image.');
+    return new Error('The removal failed with status ' + response.status + '. Please try again.');
+  }
+
+  function gated() {
+    const error = new Error('gated');
+    error.gated = true;
+    return error;
   }
 
   function describeImage(img, target, bytes) {
@@ -227,6 +286,16 @@
   }
 
   /* --------------------------------------------------------------- events */
+
+  // The picker is gated too: no point choosing a file the server will refuse.
+  // This fires for the label click as well, so one guard covers both entry points.
+  el.fileInput.addEventListener('click', (event) => {
+    const guard = auth();
+    if (guard && !guard.canRemove()) {
+      event.preventDefault();
+      guard.ensureCanRemove();
+    }
+  });
 
   el.fileInput.addEventListener('change', () => {
     const file = el.fileInput.files && el.fileInput.files[0];
