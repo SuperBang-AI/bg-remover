@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="Cutout">
+  <rect width="32" height="32" rx="6" fill="#191710"/>
+  <g fill="#F5F2EA">
+    <rect x="7" y="7" width="9" height="9"/>
+    <rect x="16" y="16" width="9" height="9"/>
+  </g>
+  <rect x="16" y="7" width="9" height="9" fill="#C03A12"/>
+  <rect x="7" y="16" width="9" height="9" fill="none" stroke="#F5F2EA" stroke-width="1" opacity="0.55"/>
+</svg>

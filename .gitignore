@@ -1,0 +1,19 @@
+# secrets and local state: never commit
+.env
+.dev.vars
+.env.*
+!.env.example
+
+# dependencies / build artifacts
+node_modules/
+.wrangler/
+dist/
+
+# macOS
+.DS_Store
+
+# logs
+*.log
+
+# agent workspace data (local notes, not project source)
+.workbuddy/

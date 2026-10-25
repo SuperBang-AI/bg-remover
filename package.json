@@ -1,0 +1,15 @@
+{
+  "name": "bg-remover",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "AI image background remover: Cloudflare Worker serving SSR pages and the removal API.",
+  "scripts": {
+    "env:sync": "node scripts/env-sync.mjs",
+    "dev": "npm run env:sync && wrangler dev",
+    "deploy": "wrangler deploy"
+  },
+  "devDependencies": {
+    "wrangler": "^4.0.0"
+  }
+}

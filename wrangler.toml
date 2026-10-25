@@ -1,0 +1,17 @@
+name = "bg-remover"
+main = "src/index.js"
+compatibility_date = "2026-10-01"
+
+# Workers Static Assets: /styles.css, /app.js, /favicon.svg are served straight from the edge.
+# Anything that is not a static file falls through to the Worker (SSR pages + API).
+[assets]
+directory = "./public"
+binding = "ASSETS"
+
+[observability]
+enabled = true
+
+# Public, non-secret configuration only.
+# Secrets (REMOVE_BG_API_KEY, ...) are set with `wrangler secret put <NAME>` and read from env.
+[vars]
+BG_PROVIDER = "remove_bg"
